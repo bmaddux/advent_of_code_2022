@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod util {
   use std::{path::Path, fs::{File}, io::{self, BufRead}};
   pub fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>> where P: AsRef<Path>, {
@@ -125,7 +127,79 @@ mod rps {
   }
 }
 
+mod rucksack {
+use crate::util;
+
+  fn compute_sack(sack: &String) -> u32 {
+    let halves = sack.split_at(sack.len() / 2);
+    let mut shared = '\0';
+    for c in halves.0.chars() {
+      if halves.1.contains(c) {
+        shared = c;
+      }
+    }
+    let mut to_dec = shared as u32;
+    if to_dec >= 97 {
+      to_dec -= 96;
+    }
+    if to_dec >= 65 && to_dec < 91 {
+      to_dec -= 38;
+    }
+    to_dec
+  }
+
+  pub fn parse_rucksacks(file_path: &str) -> u32 {
+    let mut total = 0;
+    if let Ok(lines) = util::read_lines(file_path) {
+      for line in lines {
+        if let Ok(raw_sack) = line {
+          total += compute_sack(&raw_sack);
+        }
+      }
+    }
+    total
+  }
+
+  fn compute_group(group: &[String; 3]) -> u32 {
+    let mut val = '\0';
+    for c in group[0].chars() {
+      if group[1].contains(c) && group[2].contains(c) {
+        val = c;
+      }
+    }
+    let mut to_dec = val as u32;
+    if to_dec >= 97 {
+      to_dec -= 96;
+    }
+    if to_dec >= 65 && to_dec < 91 {
+      to_dec -= 38;
+    }
+    to_dec
+  }
+
+  pub fn parse_rucksack_groups(file_path: &str) -> u32 {
+    let mut total = 0;
+    if let Ok(lines) = util::read_lines(file_path) {
+      let mut group = [String::new(), String::new(), String::new()];
+      let mut index = 0;
+      for line in lines {
+        if let Ok(raw_sack) = line {
+          group[index % 3] = raw_sack;
+        }
+        if (index + 1)% 3 == 0 {
+          total += compute_group(&group)
+        }
+        index += 1;
+      }
+    }
+    total
+  }
+
+}
+
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
-    println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
+    //println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
+    //println!("{}", rucksack::parse_rucksacks("data/rucksack.txt"))
+    println!("{}", rucksack::parse_rucksack_groups("data/rucksack.txt"))
 }
