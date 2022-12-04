@@ -197,9 +197,53 @@ use crate::util;
 
 }
 
+mod camp_cleanup {
+    use crate::util;
+
+  pub fn check_pairs(file_path: &str) -> u32 {
+    let mut total = 0;
+    if let Ok(lines) = util::read_lines(file_path) {
+      for line in lines {
+        if let Ok(pair_str) = line {
+          let pairs: Vec<&str> = pair_str.split(',').collect();
+          let pair1: Vec<&str> = pairs[0].split('-').collect();
+          let pair2: Vec<&str> = pairs[1].split('-').collect();
+
+          let lhs_start = pair1[0].parse::<u32>().unwrap();
+          let lhs_end = pair1[1].parse::<u32>().unwrap();
+
+          let rhs_start = pair2[0].parse::<u32>().unwrap();
+          let rhs_end = pair2[1].parse::<u32>().unwrap();
+
+          if pair_contains_at_all([lhs_start, lhs_end], [rhs_start, rhs_end]) {
+            total += 1;
+          }
+        }
+      }
+    }
+    total
+  }
+
+  fn pair_contains(lhs: [u32; 2], rhs: [u32; 2]) -> bool {
+    if (lhs[0] <= rhs[0] && lhs[1] >= rhs[1]) ||  (rhs[0] <= lhs[0] && rhs[1] >= lhs[1]) {
+      return true;
+    }
+    false
+  }
+  
+  fn pair_contains_at_all(lhs: [u32; 2], rhs: [u32; 2]) -> bool {
+    if (lhs[0] <= rhs[0] && lhs[1] >= rhs[0]) || (lhs[0] <= rhs[1] && lhs[1] >= rhs[1]) || 
+      (rhs[0] <= lhs[0] && rhs[1] >= lhs[0])  || (rhs[0] <= lhs[1] && rhs[1] >= lhs[1]) {
+      return true;
+    }
+    false
+  }
+}
+
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
     //println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
     //println!("{}", rucksack::parse_rucksacks("data/rucksack.txt"))
-    println!("{}", rucksack::parse_rucksack_groups("data/rucksack.txt"))
+    //println!("{}", rucksack::parse_rucksack_groups("data/rucksack.txt"))
+    println!("{}", camp_cleanup::check_pairs("data/camp_cleanup.txt"))
 }
