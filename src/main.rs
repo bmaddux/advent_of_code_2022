@@ -240,10 +240,86 @@ mod camp_cleanup {
   }
 }
 
+mod supply_stacks {
+    use crate::util;
+
+  pub fn move_many_crates(file_path: &str) -> Vec<char>{
+    let mut stacks = [vec!['J', 'H', 'G', 'M', 'Z', 'N', 'T', 'F'],
+                                      vec!['V', 'W' , 'J'],
+                                      vec!['G', 'V', 'L', 'J', 'B' , 'T', 'H'],
+                                      vec!['B', 'P', 'J', 'N', 'C', 'D', 'V', 'L'],
+                                      vec!['F', 'W', 'S', 'M', 'P', 'R', 'G'],
+                                      vec!['G', 'H', 'C', 'F', 'B', 'N', 'V', 'M'],
+                                      vec!['D', 'H', 'G', 'M', 'R'],
+                                      vec!['H', 'N', 'M', 'V', 'Z', 'D'],
+                                      vec!['G', 'N', 'F', 'H']
+                    ];
+
+    // Skip first 10 lines
+    let mut line_index = 0;
+    if let Ok(lines) = util::read_lines(file_path) {
+      for line in lines {
+        if line_index < 10 {
+          line_index += 1;
+          continue;
+        }
+        if let Ok(move_str) = line {
+          let tokens: Vec<&str> = move_str.split(' ').collect();
+          let to_move = tokens[1].parse::<u32>().unwrap();
+          let orig_size = stacks[tokens[3].parse::<usize>().unwrap() - 1].len();
+          let mut temp:Vec<_> = stacks[tokens[3].parse::<usize>().unwrap() - 1].drain(((orig_size-to_move as usize))..).collect();
+          stacks[tokens[5].parse::<usize>().unwrap() - 1].append(&mut temp);
+        }
+      }
+    }
+    let mut last_elements:Vec<char> = vec![];
+    for x in 0..stacks.len() {
+      last_elements.push(*stacks[x].last().unwrap());
+    }
+  last_elements
+  }
+  pub fn move_crates(file_path: &str) -> Vec<char>{
+    let mut stacks = [vec!['J', 'H', 'G', 'M', 'Z', 'N', 'T', 'F'],
+                                      vec!['V', 'W' , 'J'],
+                                      vec!['G', 'V', 'L', 'J', 'B' , 'T', 'H'],
+                                      vec!['B', 'P', 'J', 'N', 'C', 'D', 'V', 'L'],
+                                      vec!['F', 'W', 'S', 'M', 'P', 'R', 'G'],
+                                      vec!['G', 'H', 'C', 'F', 'B', 'N', 'V', 'M'],
+                                      vec!['D', 'H', 'G', 'M', 'R'],
+                                      vec!['H', 'N', 'M', 'V', 'Z', 'D'],
+                                      vec!['G', 'N', 'F', 'H']
+                    ];
+
+    // Skip first 10 lines
+    let mut line_index = 0;
+    if let Ok(lines) = util::read_lines(file_path) {
+      for line in lines {
+        if line_index < 10 {
+          line_index += 1;
+          continue;
+        }
+        if let Ok(move_str) = line {
+          let tokens: Vec<&str> = move_str.split(' ').collect();
+          for _x in 0..tokens[1].parse::<u32>().unwrap() {
+            let temp = stacks[tokens[3].parse::<usize>().unwrap() - 1].pop().unwrap();
+            stacks[tokens[5].parse::<usize>().unwrap() - 1].push(temp);
+          }
+        }
+      }
+    }
+    let mut last_elements:Vec<char> = vec![];
+    for x in 0..stacks.len() {
+      last_elements.push(*stacks[x].last().unwrap());
+    }
+  last_elements
+  }
+}
+
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
     //println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
     //println!("{}", rucksack::parse_rucksacks("data/rucksack.txt"))
     //println!("{}", rucksack::parse_rucksack_groups("data/rucksack.txt"))
-    println!("{}", camp_cleanup::check_pairs("data/camp_cleanup.txt"))
+    //println!("{}", camp_cleanup::check_pairs("data/camp_cleanup.txt"))
+    println!("{:?}", supply_stacks::move_many_crates("data/supply_stacks.txt"))
 }
