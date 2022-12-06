@@ -315,11 +315,40 @@ mod supply_stacks {
   }
 }
 
+mod tuning_trouble{
+  use crate::util;
+  use std::collections::HashSet;
+
+  pub fn lock_on(file_path: &str) -> usize {
+    if let Ok(lines) = util::read_lines(file_path) {
+      for line in lines {
+        if let Ok(buffer) = line {
+          let mut start_index = 0;
+          while start_index + 13 <= buffer.len() {
+            let slice = &buffer[start_index..start_index+14];
+            let mut hset = HashSet::new();
+            for c in slice.chars() {
+              hset.insert(c);
+            }
+            if hset.len() == 14 {
+              return start_index + 14;
+            } else {
+              start_index += 1;
+            }
+          }
+        }
+      }
+    }
+  0
+  }
+}
+
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
     //println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
     //println!("{}", rucksack::parse_rucksacks("data/rucksack.txt"))
     //println!("{}", rucksack::parse_rucksack_groups("data/rucksack.txt"))
     //println!("{}", camp_cleanup::check_pairs("data/camp_cleanup.txt"))
-    println!("{:?}", supply_stacks::move_many_crates("data/supply_stacks.txt"))
+    //println!("{:?}", supply_stacks::move_many_crates("data/supply_stacks.txt"))
+    println!("{}", tuning_trouble::lock_on("data/tuning_trouble.txt"));
 }
