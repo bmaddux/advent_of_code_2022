@@ -343,6 +343,83 @@ mod tuning_trouble{
   }
 }
 
+mod no_space_left {
+  use crate::util;
+  use std::collections::HashMap;
+  struct Dir {
+    name: String,
+    size: u32,
+    files: Vec<u32>,
+    children: Vec<String>
+  }
+
+  impl Dir {
+    fn get_size(&mut self, filesystem: &HashMap<String, Dir>, small_dirs: &mut Vec<u32>) -> u32 {
+      self.size = self.files.iter().sum();
+      let mut children_size = 0;
+      for c in &self.children {
+        children_size += filesystem.get(c).unwrap().get_size(filesystem, small_dirs);
+      }
+      self.size + children_size
+    }
+  }
+
+  pub fn create_file_system(file_path: &str) -> u32 {
+    let mut filesystem: HashMap<String, Dir> = HashMap::new();
+    let mut cwd = String::new();
+    if let Ok(lines) = util::read_lines(file_path) {
+      for line in lines {
+        let line_str = line.unwrap();
+        let tokens: Vec<&str> = line_str.split(" ").collect();
+        if line_str == "$ cd /" {
+          if filesystem.contains_key("/") {
+            cwd = String::from("/");
+          } else {
+            filesystem.insert("/".to_string(), Dir{
+                                                      name: String::from("/"),
+                                                      size: 0,
+                                                      files: vec![],
+                                                      children: vec![]
+                                                    });
+          }
+        }
+        // Commands [ls, cd]
+        if line_str.starts_with('$') {
+          if tokens[1] == "cd" {
+            if tokens[2] == ".." {
+              cwd = String::from(&cwd[..cwd.rfind('/').unwrap()]);
+            } else {
+              cwd = cwd + "/" + tokens[2];
+            }
+          } else if tokens[1] == "ls" {
+            continue;
+          }
+        }
+        // result of an ls [files, dirs] 
+        else {
+          let wd = filesystem.get_mut(&cwd).unwrap();
+          if line_str.starts_with("dir") {
+            let new_filename = cwd.clone() + "/" + tokens[1];
+            wd.children.push(new_filename.clone());
+            filesystem.insert(new_filename.clone(), Dir {
+              name: new_filename,
+              size: 0,
+              files: vec![],
+              children: vec![]
+            });
+          } else {
+            wd.files.push(tokens[0].parse().unwrap())
+          }
+        }
+      }
+    }
+    // Traverse filesystem 
+    let mut small_dirs: Vec<u32> = vec![];
+    filesystem.get_mut("/").unwrap().get_size(&filesystem, &mut small_dirs)
+  }
+
+}
+
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
     //println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
@@ -350,5 +427,6 @@ fn main() {
     //println!("{}", rucksack::parse_rucksack_groups("data/rucksack.txt"))
     //println!("{}", camp_cleanup::check_pairs("data/camp_cleanup.txt"))
     //println!("{:?}", supply_stacks::move_many_crates("data/supply_stacks.txt"))
-    println!("{}", tuning_trouble::lock_on("data/tuning_trouble.txt"));
+    //println!("{}", tuning_trouble::lock_on("data/tuning_trouble.txt"));
+    println!("{}", no_space_left::create_file_system("data/no_more_space.txt"));
 }
