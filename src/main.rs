@@ -344,52 +344,54 @@ mod tuning_trouble{
 }
 
 mod no_space_left {
-  use crate::util;
   use std::collections::HashMap;
+
+use crate::util;
+  #[derive(Debug)]
   struct Dir {
     name: String,
-    size: u32,
     files: Vec<u32>,
-    children: Vec<String>
+    children: HashMap<String, usize>,
+    parent: usize
   }
 
-  impl Dir {
-    fn get_size(&mut self, filesystem: &HashMap<String, Dir>, small_dirs: &mut Vec<u32>) -> u32 {
-      self.size = self.files.iter().sum();
-      let mut children_size = 0;
-      for c in &self.children {
-        children_size += filesystem.get(c).unwrap().get_size(filesystem, small_dirs);
+  fn get_dir_size(dir_index: usize, filesystem: &Vec<Dir>) -> u32 {
+    let dir = &filesystem[dir_index];
+    if dir.children.len() == 0 {
+      return dir.files.iter().sum();
+    } else {
+      let mut size = dir.files.iter().sum();
+      for (_name, index) in &dir.children {
+        size += get_dir_size(*index, filesystem);
       }
-      self.size + children_size
+      return size 
     }
   }
 
   pub fn create_file_system(file_path: &str) -> u32 {
-    let mut filesystem: HashMap<String, Dir> = HashMap::new();
-    let mut cwd = String::new();
+    let mut file_index: usize = 1;
+    let mut filesystem: Vec<Dir> = vec![Dir {
+      name: String::from("/"),
+      files: vec![],
+      children: HashMap::new(),
+      parent: 0
+    }];
+    let mut cwd: usize = 0;
     if let Ok(lines) = util::read_lines(file_path) {
       for line in lines {
         let line_str = line.unwrap();
         let tokens: Vec<&str> = line_str.split(" ").collect();
         if line_str == "$ cd /" {
-          if filesystem.contains_key("/") {
-            cwd = String::from("/");
-          } else {
-            filesystem.insert("/".to_string(), Dir{
-                                                      name: String::from("/"),
-                                                      size: 0,
-                                                      files: vec![],
-                                                      children: vec![]
-                                                    });
-          }
+          cwd = 0;
+          continue;
         }
         // Commands [ls, cd]
         if line_str.starts_with('$') {
           if tokens[1] == "cd" {
             if tokens[2] == ".." {
-              cwd = String::from(&cwd[..cwd.rfind('/').unwrap()]);
+              cwd = filesystem[cwd].parent;
             } else {
-              cwd = cwd + "/" + tokens[2];
+              cwd = filesystem[cwd].children[tokens[2]];
             }
           } else if tokens[1] == "ls" {
             continue;
@@ -397,25 +399,40 @@ mod no_space_left {
         }
         // result of an ls [files, dirs] 
         else {
-          let wd = filesystem.get_mut(&cwd).unwrap();
+          let wd = &mut filesystem[cwd];
           if line_str.starts_with("dir") {
-            let new_filename = cwd.clone() + "/" + tokens[1];
-            wd.children.push(new_filename.clone());
-            filesystem.insert(new_filename.clone(), Dir {
-              name: new_filename,
-              size: 0,
+            wd.children.insert(String::from(tokens[1]), file_index);
+            filesystem.push(Dir {
+              name: String::from(tokens[1]),
               files: vec![],
-              children: vec![]
+              children: HashMap::new(),
+              parent: cwd
             });
+            file_index += 1;
           } else {
-            wd.files.push(tokens[0].parse().unwrap())
+            wd.files.push(tokens[0].parse::<u32>().unwrap());
           }
         }
       }
     }
+    let mut file_sizes: Vec<u32> = vec![];
+    let mut smallest_to_del = std::u32::MAX;
+    let free_size =70000000 - get_dir_size(0, &filesystem);
+    let addiontal_size_to_free = 30000000 - free_size;
+    println!("additional size to free {}", addiontal_size_to_free);
     // Traverse filesystem 
-    let mut small_dirs: Vec<u32> = vec![];
-    filesystem.get_mut("/").unwrap().get_size(&filesystem, &mut small_dirs)
+    for i in 0..filesystem.len() {
+      let s = get_dir_size(i, &filesystem);
+      if s <= 100000 {
+        file_sizes.push(s);
+      }
+      if s >= addiontal_size_to_free && s < smallest_to_del {
+        smallest_to_del = s;
+      }
+    }
+    println!("smallest to del {}", smallest_to_del);
+    println!("{}", get_dir_size(0, &filesystem));
+    file_sizes.iter().sum()
   }
 
 }
@@ -428,5 +445,5 @@ fn main() {
     //println!("{}", camp_cleanup::check_pairs("data/camp_cleanup.txt"))
     //println!("{:?}", supply_stacks::move_many_crates("data/supply_stacks.txt"))
     //println!("{}", tuning_trouble::lock_on("data/tuning_trouble.txt"));
-    println!("{}", no_space_left::create_file_system("data/no_more_space.txt"));
+    println!("{}", no_space_left::create_file_system("data/no_space_left.txt"));
 }
