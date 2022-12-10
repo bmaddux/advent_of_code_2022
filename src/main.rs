@@ -436,6 +436,116 @@ use crate::util;
   }
 
 }
+  mod treetop_tree_house {
+    use crate::util;
+    
+    fn check_visibility(forest: &Vec<Vec<u32>>, x: usize, y: usize) -> bool {
+      if x == 0 || y == 0 {
+        return true;
+      }
+      let cur_height = forest[y][x];
+      
+      let mut taller_than_right = true;
+      for right in x+1..forest[y].len()  {
+        taller_than_right &= cur_height > forest[y][right];
+      }
+      let mut taller_than_left = true;
+      for left in (0..x).rev() {
+        taller_than_left &= cur_height > forest[y][left];
+      }
+      let mut taller_than_above = true;
+      for above in (0..y).rev() {
+        taller_than_above &= cur_height > forest[above][x];
+      }
+      let mut taller_than_below = true;
+      for below in y+1..forest.len() {
+        taller_than_below &= cur_height > forest[below][x];
+      }
+      taller_than_above || taller_than_below || taller_than_left || taller_than_right
+    }
+
+    fn count_visible_trees(forest: &Vec<Vec<u32>>) -> u32 {
+      // now check each tree for visibility
+      let num_rows = forest.len();
+      let num_cols = forest[0].len();
+      let mut visible_trees = 0;
+      for y in 0..num_rows {
+        for x in 0..num_cols{
+          if check_visibility(&forest, x, y) {
+            visible_trees += 1;
+          }
+        }
+      }
+      visible_trees
+    }
+
+    fn compute_scenic_score(forest: &Vec<Vec<u32>>, x: usize, y: usize) -> u32 {
+      if x == 0 || y == 0 || x == forest[0].len()-1 || y == forest.len()-1{
+        return 0;
+      }
+      let (mut max_up, mut max_down, mut max_left, mut max_right) = (1, 1, 1, 1);
+      let cur_height = forest[y][x];
+      for right in x+1..forest[y].len()-1 {
+        match cur_height > forest[y][right] {
+          true => max_right += 1,
+          false => break
+        }
+      }
+      for left in (1..x).rev() {
+        match cur_height > forest[y][left] {
+          true => max_left += 1,
+          false => break
+        }
+      }
+      for down in y+1..forest.len()-1 {
+        match cur_height > forest[down][x] {
+          true => max_down += 1,
+          false => break
+        }
+      }
+      for up in (1..y).rev() {
+        match cur_height > forest[up][x] {
+          true => max_up += 1,
+          false => break
+        }
+      }
+      let ans = max_up * max_down * max_left * max_right;
+      ans
+    }
+
+    fn find_max_scenic_score(forest: &Vec<Vec<u32>>) -> u32 {
+      let num_rows = forest.len();
+      let num_cols = forest[0].len();
+      let mut max_scenic_score: u32 = 0;
+      for y in 0..num_rows {
+        for x in 0..num_cols{
+          let scenic_score = compute_scenic_score(&forest, x, y);
+          if scenic_score > max_scenic_score {
+            max_scenic_score = scenic_score;
+          }
+        }
+      }
+      max_scenic_score
+    }
+    pub fn run_trees(file_path: &str) -> u32 {
+      let mut forest:Vec<Vec<u32>> = vec![];
+      if let Ok(lines) = util::read_lines(file_path) {
+        for line in lines {
+          let mut row: Vec<u32> = vec![];
+          let line_str = line.unwrap();
+          for c in line_str.chars() {
+            row.push(c.to_digit(10).unwrap());
+          }
+          forest.push(row);
+        }
+        find_max_scenic_score(&forest)
+      } else {
+        panic!("Error reading {}", file_path);
+      }
+
+
+    }
+  }
 
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
@@ -445,5 +555,6 @@ fn main() {
     //println!("{}", camp_cleanup::check_pairs("data/camp_cleanup.txt"))
     //println!("{:?}", supply_stacks::move_many_crates("data/supply_stacks.txt"))
     //println!("{}", tuning_trouble::lock_on("data/tuning_trouble.txt"));
-    println!("{}", no_space_left::create_file_system("data/no_space_left.txt"));
+    //println!("{}", no_space_left::create_file_system("data/no_space_left.txt"));
+    println!("{}", treetop_tree_house::run_trees("data/treetop_tree_house.txt"));
 }
