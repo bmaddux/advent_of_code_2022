@@ -547,6 +547,45 @@ use crate::util;
     }
   }
 
+  mod rope_bridge {
+    use crate::util;
+    use std::collections::HashSet;
+
+    struct End {
+      x: i32,
+      y: i32
+    }
+
+    impl End {
+      fn new() -> Self {
+        End {
+          x: 0,
+          y: 0
+        }
+      }
+    }
+
+    fn move_rope(head: &mut End, tail: &mut End, direction: &str, magnitude: i32) -> (i32, i32) {
+
+      (tail.x, tail.y)
+    }
+
+    pub fn rope_path(file_path: &str) -> usize {
+      let (mut head, mut tail) = (End::new(), End::new());
+      let mut visted_locations:HashSet<(i32, i32)> = HashSet::new();
+      if let Ok(lines) = util::read_lines(file_path) {
+        for line in lines {
+          let line_str = line.unwrap();
+          let tokens: Vec<&str> = line_str.split_whitespace().collect();
+          let direction = tokens[0];
+          let magnitude = tokens[1].parse::<i32>().unwrap();
+          visted_locations.insert(move_rope(&mut head, &mut tail, direction, magnitude));
+        }
+      }
+      visted_locations.len()
+    }
+  }
+
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
     //println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
