@@ -551,6 +551,7 @@ use crate::util;
     use crate::util;
     use std::collections::HashSet;
 
+    #[derive(Clone, Copy, Debug)]
     struct End {
       x: i32,
       y: i32
@@ -565,13 +566,56 @@ use crate::util;
       }
     }
 
-    fn move_rope(_head: &mut End, tail: &mut End, _direction: &str, _magnitude: i32) -> (i32, i32) {
-
-      (tail.x, tail.y)
+    fn move_rope(rope: &mut [End; 10], direction: &str, magnitude: i32, visited_locations: &mut HashSet<(i32, i32)>) {
+      for _ in 0..magnitude {
+        match direction {
+          "R" => rope[0].x += 1,
+          "D" => rope[0].y += 1,
+          "L" => rope[0].x -= 1,
+          "U" => rope[0].y -= 1,
+          _ => {},
+        }
+        for rope_index in 1..rope.len() {
+          let (head_list, tail_list) = rope.split_at_mut(rope_index);
+          let head = head_list.last_mut().unwrap();
+          let tail = tail_list.first_mut().unwrap();
+          // Same row, different column
+          if (head.x - tail.x).abs() > 1 && head.y == tail.y {
+            match head.x > tail.x {
+              true => tail.x += 1,
+              false => tail.x -= 1,
+            }
+          }
+          // Same column, differnt row
+          else if (head.y - tail.y).abs() > 1 && head.x == tail.x {
+            match head.y > tail.y {
+              true => tail.y += 1,
+              false => tail.y -= 1,
+            }
+          } 
+          // If either is further away in row or column by 2, then the other dimension must
+          // also be adjustable
+          else if (head.x - tail.x).abs() > 1 || (head.y - tail.y).abs() > 1 {
+            match head.y > tail.y {
+              true => tail.y += 1,
+              false => tail.y -= 1,
+            }
+            match head.x > tail.x {
+              true => tail.x += 1,
+              false => tail.x -= 1,
+            }
+          } else if (head.y - tail.y).abs() <= 1 && (head.x - tail.x).abs() <= 1 {
+            // noop
+          } else {
+            panic!("rope index {}, node before {:?}, node at index {:?}", rope_index, head, tail);
+          }
+        }
+        visited_locations.insert((rope.last().unwrap().x, rope.last().unwrap().y));
+      }
     }
 
     pub fn rope_path(file_path: &str) -> usize {
-      let (mut head, mut tail) = (End::new(), End::new());
+      let mut rope: [End; 10] = [End::new(); 10];
       let mut visted_locations:HashSet<(i32, i32)> = HashSet::new();
       if let Ok(lines) = util::read_lines(file_path) {
         for line in lines {
@@ -579,7 +623,7 @@ use crate::util;
           let tokens: Vec<&str> = line_str.split_whitespace().collect();
           let direction = tokens[0];
           let magnitude = tokens[1].parse::<i32>().unwrap();
-          visted_locations.insert(move_rope(&mut head, &mut tail, direction, magnitude));
+          move_rope(&mut rope, direction, magnitude, &mut visted_locations);
         }
       }
       visted_locations.len()
@@ -784,5 +828,6 @@ fn main() {
     //println!("{}", no_space_left::create_file_system("data/no_space_left.txt"));
     //println!("{}", treetop_tree_house::run_trees("data/treetop_tree_house.txt"));
     //println!("{}", crt::signal_strength("data/signal_strength.txt"));
-    println!("{}", monkey_middle::run_monkeys("data/monkey_in_the_middle.txt"))
+    //println!("{}", rope_bridge::rope_path("data/rope_bridge.txt"));
+    //println!("{}", monkey_middle::run_monkeys("data/monkey_in_the_middle.txt"))
 }
