@@ -142,7 +142,7 @@ use crate::util;
     if to_dec >= 97 {
       to_dec -= 96;
     }
-    if to_dec >= 65 && to_dec < 91 {
+    if (65..91).contains(&to_dec) {
       to_dec -= 38;
     }
     to_dec
@@ -171,7 +171,7 @@ use crate::util;
     if to_dec >= 97 {
       to_dec -= 96;
     }
-    if to_dec >= 65 && to_dec < 91 {
+    if (65..91).contains(&to_dec) {
       to_dec -= 38;
     }
     to_dec
@@ -357,14 +357,14 @@ use crate::util;
 
   fn get_dir_size(dir_index: usize, filesystem: &Vec<Dir>) -> u32 {
     let dir = &filesystem[dir_index];
-    if dir.children.len() == 0 {
+    if dir.children.is_empty() {
       return dir.files.iter().sum();
     } else {
       let mut size = dir.files.iter().sum();
       for (_name, index) in &dir.children {
         size += get_dir_size(*index, filesystem);
       }
-      return size 
+      size 
     }
   }
 
@@ -380,7 +380,7 @@ use crate::util;
     if let Ok(lines) = util::read_lines(file_path) {
       for line in lines {
         let line_str = line.unwrap();
-        let tokens: Vec<&str> = line_str.split(" ").collect();
+        let tokens: Vec<&str> = line_str.split(' ').collect();
         if line_str == "$ cd /" {
           cwd = 0;
           continue;
@@ -471,7 +471,7 @@ use crate::util;
       let mut visible_trees = 0;
       for y in 0..num_rows {
         for x in 0..num_cols{
-          if check_visibility(&forest, x, y) {
+          if check_visibility(forest, x, y) {
             visible_trees += 1;
           }
         }
@@ -509,8 +509,8 @@ use crate::util;
           false => break
         }
       }
-      let ans = max_up * max_down * max_left * max_right;
-      ans
+      
+      max_up * max_down * max_left * max_right
     }
 
     fn find_max_scenic_score(forest: &Vec<Vec<u32>>) -> u32 {
@@ -519,7 +519,7 @@ use crate::util;
       let mut max_scenic_score: u32 = 0;
       for y in 0..num_rows {
         for x in 0..num_cols{
-          let scenic_score = compute_scenic_score(&forest, x, y);
+          let scenic_score = compute_scenic_score(forest, x, y);
           if scenic_score > max_scenic_score {
             max_scenic_score = scenic_score;
           }
@@ -565,7 +565,7 @@ use crate::util;
       }
     }
 
-    fn move_rope(head: &mut End, tail: &mut End, direction: &str, magnitude: i32) -> (i32, i32) {
+    fn move_rope(_head: &mut End, tail: &mut End, _direction: &str, _magnitude: i32) -> (i32, i32) {
 
       (tail.x, tail.y)
     }
@@ -586,6 +586,193 @@ use crate::util;
     }
   }
 
+  mod crt {
+    use crate::util;
+
+    fn run_cycle(cycle: &mut i32, x: i32, values: &mut Vec<i32> , crt: &mut [[char; 40]; 6]) {
+      const CHECK_CYCLES: [i32; 6] = [20, 60, 100, 140, 180, 220];
+      if CHECK_CYCLES.contains(cycle) {
+        values.push(*cycle * x);
+      }
+      let (horizontal, vertical) = get_coordinates_from_cycle(*cycle);
+      if x.abs_diff(horizontal) <= 1 {
+        crt[vertical as usize][horizontal as usize] = '#';
+      }
+      *cycle += 1;
+    }
+
+    fn get_coordinates_from_cycle(cycle: i32) -> (i32, i32) {
+      let y = (cycle - 1) / 40;
+      let x = (cycle - 1) % 40;
+      (x, y)
+    }
+
+    pub fn signal_strength(file_path: &str) -> i32 {
+      let mut cycle = 1;
+      let mut X = 1;
+      let mut values: Vec<i32> = vec![];
+      let mut crt: [[char; 40]; 6] = [['.'; 40]; 6];
+      if let Ok(lines) = util::read_lines(file_path) {
+        for line in lines.flatten() {
+          let tokens: Vec<&str> = line.split_whitespace().collect();
+          if tokens[0] == "noop" {
+            run_cycle(&mut cycle, X, &mut values, &mut crt);
+          } else if tokens[0] == "addx" {
+            run_cycle(&mut cycle, X, &mut values, &mut crt);
+            run_cycle(&mut cycle, X, &mut values, &mut crt);
+            X += tokens[1].parse::<i32>().unwrap();
+          } else {
+            panic!("Unrecognized instruction {}", tokens[0]);
+          }
+        }
+      }
+    for y in 0..6 {
+      for x in 0..40 {
+        print!("{}" , crt[y][x]);
+      }
+      println!("");
+    }
+    values.iter().sum()
+    }
+  }
+
+  mod monkey_middle {
+    use std::collections::{VecDeque, HashMap};
+
+    use crate::util;
+
+    struct Monkey {
+      operation: Box<dyn Fn(&i64) -> i64>,
+      test: Box<dyn Fn(&i64) -> usize>,
+      test_val: i64,
+      items: VecDeque<i64>,
+      inspections: i32,
+    }
+
+    impl Monkey {
+      fn new() -> Self{
+        Monkey{
+          operation: Box::new(|_| 0 ),
+          test: Box::new(|_| 0),
+          test_val: 0,
+          items: VecDeque::new(),
+          inspections: 0,
+        }
+      }
+    }
+
+    pub fn run_monkeys(file_path: &str) -> u128 {
+      let mut monkeys: Vec<Monkey> = vec![];
+      let (mut test, mut val_true, mut val_false) = (0 as i64, 0 as usize, 0 as usize);
+      if let Ok(lines) = util::read_lines(file_path) {
+        for line in lines.flatten() {
+          if line.starts_with("Monkey") {
+            monkeys.push(Monkey::new());
+          }
+          else if line.trim().starts_with("Starting") {
+            monkeys.last_mut().unwrap().items = line.split_whitespace().skip(2).map(|x| x.replace(",", "").parse::<i64>().unwrap()).collect();
+          }
+          else if line.trim().starts_with("Operation") {
+            if line.contains('*') {
+              if line.ends_with("old") {
+                monkeys.last_mut().unwrap().operation = Box::new(move |x| x * x);
+              } else {
+                monkeys.last_mut().unwrap().operation = Box::new(move |x| x * line.split_whitespace().last().unwrap().parse::<i64>().unwrap())
+              }
+            } else if line.contains('+') {
+              monkeys.last_mut().unwrap().operation = Box::new(move |x| x + line.split_whitespace().last().unwrap().parse::<i64>().unwrap())
+            }
+          } else if line.trim().starts_with("Test") {
+            test = line.split_whitespace().last().unwrap().parse::<i64>().unwrap();
+          } else if line.trim().starts_with("If true") {
+            val_true = line.split_whitespace().last().unwrap().parse::<usize>().unwrap();
+          } else if line.trim().starts_with("If false") {
+            val_false = line.split_whitespace().last().unwrap().parse::<usize>().unwrap();
+          } else {
+            monkeys.last_mut().unwrap().test = Box::new(move |x| match x % test == 0 {
+              true => { val_true},
+              false => {val_false}
+            } );
+            monkeys.last_mut().unwrap().test_val = test;
+          }
+        }
+        monkeys.last_mut().unwrap().test = Box::new(move |x| match x % test == 0 {
+          true => {val_true},
+          false => {val_false}
+        } );
+        monkeys.last_mut().unwrap().test_val = test;
+      }
+      // Begin processing rounds
+      let mut divisors: Vec<i64> = vec![];
+      for m in &monkeys {
+        divisors.push(m.test_val);
+      }
+      let mut cache: HashMap<i64, i64> = HashMap::new();
+      for l in 0..10000 {
+        println!("{}", l);
+        for monkey_index in 0..monkeys.len() {
+          let mut toss: Vec<(usize, i64)> = vec![];
+          let monkey = &mut monkeys[monkey_index];
+          if monkey.items.len() == 0 {
+            continue;
+          } else {
+            while !monkey.items.is_empty() {
+              let item = monkey.items.front_mut().unwrap();
+              *item = (monkey.operation)(item);
+
+              let index = (monkey.test)(item);
+              if cache.contains_key(item) {
+                *item = cache[item];
+              } else {
+                let mut remainders: Vec<i64> = vec![];
+
+                for d in &divisors {
+                  remainders.push(*item % d);
+                }
+              
+                let max_divisor = *divisors.iter().max().unwrap();
+                let max_index = divisors.iter().position(|&r| r == max_divisor).unwrap();
+                let mut checknum: i64 = max_divisor + remainders[max_index];
+                while checknum < *item {
+                  let mut substitute = true;
+                  for i in 0..divisors.len() {
+                    substitute &= checknum % divisors[i] == remainders[i];
+                    if !substitute {
+                      break;
+                    }
+                  }
+                  if substitute {
+                    cache.insert(*item, checknum);
+                    *item = checknum;
+                    break;
+                  }
+                  checknum += max_divisor;
+                }
+              }
+
+              toss.push((index, monkey.items.pop_front().unwrap()));
+              monkey.inspections += 1;
+            }
+          }
+          for (index, value) in toss {
+            let dest_monkey = &mut monkeys[index];
+            dest_monkey.items.push_back(value);
+          }
+        }
+      }
+      let mut inspections: Vec<i32> = vec![];
+      for monkey in monkeys {
+        inspections.push(monkey.inspections);
+      }
+      inspections.sort();
+      inspections.reverse();
+      println!("{:?}", inspections);
+      inspections[0] as u128 * inspections[1] as u128
+      // answer is 29703395016
+      // [172863, 171832, 167043, 167042, 160272, 12961, 12942, 12599]
+    }
+  }
+
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
     //println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
@@ -595,5 +782,7 @@ fn main() {
     //println!("{:?}", supply_stacks::move_many_crates("data/supply_stacks.txt"))
     //println!("{}", tuning_trouble::lock_on("data/tuning_trouble.txt"));
     //println!("{}", no_space_left::create_file_system("data/no_space_left.txt"));
-    println!("{}", treetop_tree_house::run_trees("data/treetop_tree_house.txt"));
+    //println!("{}", treetop_tree_house::run_trees("data/treetop_tree_house.txt"));
+    //println!("{}", crt::signal_strength("data/signal_strength.txt"));
+    println!("{}", monkey_middle::run_monkeys("data/monkey_in_the_middle.txt"))
 }
