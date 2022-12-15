@@ -817,6 +817,86 @@ use crate::util;
     }
   }
 
+  mod distress_signal {
+    use crate::util;
+    use serde_json::Value;
+
+    enum State {
+      True,
+      False,
+      Continue
+    }
+
+    fn check_pairs(packet1: &Value, packet2: &Value) -> State {
+      println!("{} {}", packet1, packet2);
+      if packet1.is_array() && packet2.is_array() {
+        let array1 = packet1.as_array().unwrap();
+        let array2 = packet2.as_array().unwrap();
+        for (index, item) in array1.into_iter().enumerate() {
+          if index >= array2.len() {
+            return State::False;
+          }
+          match check_pairs(item, &array2[index]) {
+            State::True => return State::True,
+            State::False => return State::False,
+            State::Continue => {},
+          }
+        }
+        if array1.len() < array2.len() {
+          return State::True;
+        }
+      }
+      if packet1.is_i64() && packet2.is_i64() {
+        match packet1.as_i64().unwrap().cmp(&packet2.as_i64().unwrap()) {
+          std::cmp::Ordering::Less =>return State::True,
+          std::cmp::Ordering::Greater =>return State::False,
+          std::cmp::Ordering::Equal => return State::Continue,
+        }
+      }
+      if packet1.is_array() && packet2.is_i64() {
+        let temp =Value::Array(Vec::from([packet2.clone()]));
+        return check_pairs(packet1, &temp);
+      }
+      if packet1.is_i64() && packet2.is_array() {
+        let temp =Value::Array(Vec::from([packet1.clone()]));
+        return check_pairs(&temp, packet2);
+      }
+      panic!()
+    }
+
+    pub fn run_check_pairs(file_path: &str) -> i32 {
+      let mut pair_counter = 0;
+      let mut line_counter = 0;
+      let mut packet1: Value = Value::Null;
+      let mut packet2: Value = Value::Null;
+      if let Ok(lines) = util::read_lines(file_path) {
+        for line in lines.flatten() {
+          if line_counter % 3 == 0 {
+            packet1 = serde_json::from_str(&line).unwrap();
+          }
+          if line_counter % 3 == 1 {
+            packet2 = serde_json::from_str(&line).unwrap();
+          }
+          if line_counter % 3 == 2 {
+            match check_pairs(&packet1, &packet2)  {
+              State::True => {
+                println!("True");
+                pair_counter += (line_counter + 1) / 3;
+              },
+              State::False => {
+                println!("False");
+              },
+              _ => panic!()
+            }
+          }
+          line_counter += 1;
+        }
+      }
+      pair_counter
+    }
+
+  }
+
 fn main() {
     //println!("{}", calorie_counting::count_calories("data/calorie_counting.txt"));
     //println!("{}", rps::rock_paper_sissors("data/rock_paper_sissors.txt"))
@@ -830,4 +910,5 @@ fn main() {
     //println!("{}", crt::signal_strength("data/signal_strength.txt"));
     //println!("{}", rope_bridge::rope_path("data/rope_bridge.txt"));
     //println!("{}", monkey_middle::run_monkeys("data/monkey_in_the_middle.txt"))
+    println!("{}", distress_signal::run_check_pairs("data/distress_signal.txt"))
 }
