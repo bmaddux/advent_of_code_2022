@@ -826,14 +826,20 @@ use crate::util;
       False,
       Continue
     }
-
+    fn cmp_values(packet1: &Value, packet2: &Value) -> std::cmp::Ordering {
+      match check_pairs(packet1, packet2) {
+        State::True => std::cmp::Ordering::Less,
+        State::False => std::cmp::Ordering::Greater,
+        State::Continue => std::cmp::Ordering::Equal
+      }
+    }
     fn check_pairs(packet1: &Value, packet2: &Value) -> State {
       println!("{} {}", packet1, packet2);
       if packet1.is_array() && packet2.is_array() {
         let array1 = packet1.as_array().unwrap();
         let array2 = packet2.as_array().unwrap();
         for (index, item) in array1.into_iter().enumerate() {
-          if index >= array2.len() {
+          if index + 1 > array2.len() {
             return State::False;
           }
           match check_pairs(item, &array2[index]) {
@@ -842,8 +848,10 @@ use crate::util;
             State::Continue => {},
           }
         }
-        if array1.len() < array2.len() {
-          return State::True;
+        match array1.len().cmp(&array2.len()) {
+          std::cmp::Ordering::Less => return State::True,
+          std::cmp::Ordering::Greater => return State::False,
+          std::cmp::Ordering::Equal => return State::Continue
         }
       }
       if packet1.is_i64() && packet2.is_i64() {
@@ -864,6 +872,35 @@ use crate::util;
       panic!()
     }
 
+    pub fn run_check_pairs_part2(file_path: &str) -> usize {
+      let mut packets : Vec<Value> = vec![];
+      if let Ok(lines) = util::read_lines(file_path) {
+        for line in lines.flatten() {
+          if line.trim().len() > 1 {
+            let packet = serde_json::from_str(&line).unwrap();
+            packets.push(packet);
+          }
+        }
+      }
+      // Sort packets
+      let key1: Value = serde_json::from_str("[[2]]").unwrap();
+      let key2: Value = serde_json::from_str("[[6]]").unwrap();
+      packets.push(key1.clone());
+      packets.push(key2.clone());
+      packets.sort_by(|a, b| cmp_values(&a, &b));
+      let mut index1 = 0;
+      let mut index2 = 0;
+      
+      for (index, item) in packets.into_iter().enumerate() {
+        if item == key1 {
+          index1 = index + 1;
+        }
+        if item == key2 {
+          index2 = index + 1;
+        }
+      }
+      index1 * index2
+    }
     pub fn run_check_pairs(file_path: &str) -> i32 {
       let mut pair_counter = 0;
       let mut line_counter = 0;
@@ -910,5 +947,5 @@ fn main() {
     //println!("{}", crt::signal_strength("data/signal_strength.txt"));
     //println!("{}", rope_bridge::rope_path("data/rope_bridge.txt"));
     //println!("{}", monkey_middle::run_monkeys("data/monkey_in_the_middle.txt"))
-    println!("{}", distress_signal::run_check_pairs("data/distress_signal.txt"))
+    println!("{}", distress_signal::run_check_pairs_part2("data/distress_signal.txt"))
 }
