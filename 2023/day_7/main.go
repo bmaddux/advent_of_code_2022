@@ -9,9 +9,10 @@ import (
 )
 
 type Hand struct {
-	cards     string
-	hand_type int
-	bet       int
+	cards            string
+	hand_type        int
+	hand_type_jokers int
+	bet              int
 }
 
 func make_hand(line string) Hand {
@@ -93,6 +94,57 @@ func make_hand(line string) Hand {
 		hand.hand_type = 0
 	}
 
+	for i := 0; i < len(card_count); i++ {
+		if i != 9 {
+			card_count[i] += card_count[9]
+		}
+	}
+
+	// Find the highest count of any one card
+	max_count = 0
+	for _, count := range card_count {
+		if count > max_count {
+			max_count = count
+		}
+	}
+
+	switch {
+	case max_count == 5:
+		hand.hand_type_jokers = 6
+	case max_count == 4:
+		hand.hand_type_jokers = 5
+	case max_count == 3:
+		// this is at worst a 3 of a kind
+		// Check if its also a full house
+		hand.hand_type_jokers = 3
+		pair_count := 0
+		for _, count := range card_count {
+			count -= card_count[9]
+			if count == 2 {
+				pair_count++
+			}
+		}
+		if pair_count == 2 || (pair_count == 1 && card_count[9] == 0) {
+			hand.hand_type_jokers = 4
+		}
+	case max_count == 2:
+		// this is at worst a pair
+		// Check if its also a two pair
+		hand.hand_type_jokers = 1
+		pair_counts := 0
+		for _, count := range card_count {
+			count -= card_count[9]
+			if count == 2 {
+				pair_counts++
+			}
+		}
+		if pair_counts == 2 {
+			hand.hand_type_jokers = 2
+		}
+	case max_count == 1:
+		hand.hand_type_jokers = 0
+	}
+
 	hand.bet, _ = strconv.Atoi(tokens[1])
 
 	return hand
@@ -106,7 +158,7 @@ func cmp_hands(a, b string) int {
 			case runes[i][j] == 'T':
 				runes[i][j] = 'A'
 			case runes[i][j] == 'J':
-				runes[i][j] = 'B'
+				runes[i][j] = '0'
 			case runes[i][j] == 'Q':
 				runes[i][j] = 'C'
 			case runes[i][j] == 'K':
@@ -138,6 +190,17 @@ func sort_hands(a, b Hand) int {
 	}
 }
 
+func sort_hands_j(a, b Hand) int {
+	switch {
+	case a.hand_type_jokers < b.hand_type_jokers:
+		return -1
+	case a.hand_type_jokers > b.hand_type_jokers:
+		return 1
+	default:
+		return cmp_hands(a.cards, b.cards)
+	}
+}
+
 func compute_winnings(hands []Hand) int {
 	winnings := 0
 
@@ -154,9 +217,6 @@ func main() {
 	for _, line := range lines {
 		hands = append(hands, make_hand(line))
 	}
-
-	slices.SortFunc(hands, sort_hands)
-	fmt.Println(hands)
-
+	slices.SortFunc(hands, sort_hands_j)
 	fmt.Println(compute_winnings(hands))
 }
